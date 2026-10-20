@@ -3,7 +3,7 @@ name: vuln-repro
 description: 接收第三方漏洞报告并在隔离实验环境中复现：搭建 KVM 靶机、按报告/PoC 原样触发、采集证据，产出复现报告 DOCX 与复现视频 MP4。当用户提供漏洞报告/CVE/安全公告并要求复现、验证复现、写复现报告或录制复现视频时使用。
 compatibility: 要求 Linux x86_64 宿主（KVM、/proc、GNU coreutils）；依赖 qemu-system-x86_64/qemu-img、ssh/sshpass、vncsnapshot/vncdo、ffmpeg(libx264)、python3 + python-docx + Pillow；可选 systemd-run（VM cgroup 限制）。本技能完全自包含，不依赖其他技能。
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # 漏洞复现工厂（vuln-repro）
@@ -60,7 +60,9 @@ scripts/lab-snapshot.sh --name <vm> --tag clean   # 每轮复现的回滚点
 ## 2. 复现执行（五道闸门，顺序执行）
 
 1. **环境闸门**：靶机为 `clean` 快照；采集版本指纹（OS 构建号、产品/组件版本与 SHA-256）落盘，与 `claim.preconditions` 核对；
-2. **部署闸门**：按报告步骤安装/部署目标；记录安装来源、默认选项、部署方式（不要"更聪明"地改变部署）；
+2. **部署闸门（保真度分级）**：按报告步骤部署目标，不要"更聪明"地改变部署。两级：
+   - **LAB 级**（手工拷组件/手工建服务）：仅用于初步复现与差异排查，结论在报告中标 `lab-deployed`；
+   - **PRODUCT 级**（完整官方安装，组件经产品真实分发路径就位——安装器直装，或客户端"按需下发"真实触发）：**最终复现报告与视频必须基于 PRODUCT 级**。若报告前提是"安装了该产品的正常机器"，LAB 级结果只算初步证据——须在 PRODUCT 级重跑判定与 N/M 后才能写 `reproduced`，否则写 `partial` 并把部署差异写进 verdict.differences；
 3. **执行闸门**：按报告/PoC **原样**触发；控制台输出、时间戳、截图逐项落盘；
 4. **判定闸门**：对照 `acceptance` 判定；观测配方按漏洞类型见 `references/evidence.md`（崩溃/挂死/信息泄露/访问控制/功能效果五类 oracle 与取证要求）；
 5. **确定性闸门**：`lab-reset.sh --name <vm> --tag clean --yes` 回滚后重复执行——崩溃类 ≥5 次，其余 ≥3 次，记录 N/M 与时间；一次成功不算结论。
@@ -96,7 +98,7 @@ scripts/auto-repro.sh --display 127.0.0.1:<d> --ssh-port <p> --ssh-user <u> \
   --mode crash|hang [--vm-disk <盘路径>] [--heartbeat] [--duration 240]
 ```
 
-分镜模板 `assets/go.cmd.template`；录制原理、guest 一次性环境（AutoAdminLogon/防息屏/关 WinRE）与实测坑见 `references/recording.md`。纪律：片中证明**复现环境与报告前提一致**（版本指纹入镜；报告宣称低权限则标准用户 `whoami` 入镜）；真实屏幕、失败不剪、不摆拍。规格校验 `scripts/check-mp4.sh`。文件名与 DOCX 同名（扩展名不同）。
+分镜模板 `assets/go.cmd.template`；录制原理、guest 一次性环境（AutoAdminLogon/防息屏/关 WinRE）与实测坑见 `references/recording.md`。纪律：**最终视频基于 PRODUCT 级部署**（LAB 级手工组件快照不得用于最终视频，先完整重装重验再录）；片中证明**复现环境与报告前提一致**（版本指纹入镜；报告宣称低权限则标准用户 `whoami` 入镜）；真实屏幕、失败不剪、不摆拍。规格校验 `scripts/check-mp4.sh`。文件名与 DOCX 同名（扩展名不同）。
 
 ## 5. 交付物与收尾
 
