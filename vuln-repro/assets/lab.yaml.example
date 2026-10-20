@@ -1,0 +1,36 @@
+# Example lab profile. Copy to lab.yaml and adjust.
+lab:
+  base_image: /opt/winlab/base-clean.qcow2
+  vm_dir: /opt/winlab/vms
+  host_reserve_gb: 3
+  per_session_gb: 8
+
+  tiers:
+    S:  {vcpu: 1, mem_gb: 2}   # PoC 复验 / 单发探针 / 录屏
+    M:  {vcpu: 2, mem_gb: 3}   # IOCTL 扫描 / 崩溃循环（默认）
+    L:  {vcpu: 4, mem_gb: 5}   # race / 并发 / ETW 高频
+    XL: {vcpu: 6, mem_gb: 6}   # 多核矩阵，需独占
+
+  guest:
+    windows:
+      ssh_user: administrator
+      ssh_password_env: LAB_SSH_PASSWORD
+      work_dir: C:\fwlab
+      baseline:
+        testsigning: "off"
+        uac: default
+        defender: "on"
+      standard_user: victim
+    linux:
+      ssh_user: root
+      work_dir: /tmp/fwlab
+      baseline:
+        kasan: optional
+        lockdep: optional
+
+  recording:
+    vnc_display: 6
+    fps: 2.5
+    width: 1920
+    height: 1080
+    ffmpeg: /usr/bin/ffmpeg

@@ -1,0 +1,36 @@
+@echo off
+rem go.cmd.template — guest-side PoC storyboard for auto-repro.sh.
+rem Copy to the guest (e.g. c:\p\go.cmd) and adapt every REM-marked slot.
+rem Rules: each step prints "=== Step N ... ===" so the video is readable with
+rem sound off; pause between steps so the capture (2-5 fps) doesn't miss them;
+rem finish with the expected outcome. Do not weaponize; crash/hang proof only.
+
+rem === Step 1: environment / normal-victim config ===
+echo === Step 1: winver + component hash ===
+winver
+rem (close winver manually once, or replace with: cmd /c ver + reg query for build)
+powershell -NoProfile -Command "Get-FileHash C:\path\to\driver.sys -Algorithm SHA256"
+timeout /t 4 /nobreak >nul
+
+rem === Step 2: standard-user proof (the core selling point) ===
+echo === Step 2: whoami / groups ===
+whoami
+whoami /groups | findstr /i "administrators"
+net localgroup Administrators
+timeout /t 4 /nobreak >nul
+
+rem === Step 3: vendor deployment proof ===
+echo === Step 3: sc qc <service> ===
+sc qc <service>
+sc query <service>
+timeout /t 3 /nobreak >nul
+
+rem === Step 4: trigger the PoC (standard user) ===
+echo === Step 4: run PoC ===
+powershell -NoProfile -ExecutionPolicy Bypass -File C:\path\to\poc.ps1 <args>
+echo EXPECTED: <fill in: freeze, no 1001 / bugcheck 0xXX / frames returned>
+
+rem === Step 5: post-conditions (only reached when the guest survives) ===
+echo === Step 5: post-check ===
+powershell -NoProfile -Command "Get-WinEvent -FilterHashtable @{LogName='System';Id=1001} -MaxEvents 1 | Format-List"
+dir C:\Windows\Minidump 2>nul
