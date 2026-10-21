@@ -10,12 +10,12 @@ Spec format (cards.json):
 {
   "cards": [
     {"id": "title", "kind": "text", "seconds": 6,
-     "title": "ToDesk ToDeskHubFlt 本地拒绝服务",
-     "lines": ["成因：IOCTL 0x221844 索引越界", "组件：ToDeskHubFlt.sys 3.0.9.168", ...],
+     "title": "ExampleSoft ExampleFlt 本地拒绝服务",
+     "lines": ["成因：IOCTL 0x222000 索引越界", "组件：ExampleFlt.sys 1.0.0.1", ...],
      "footer": "隔离 VM · 仅用于漏洞复现材料"},
     {"id": "result", "kind": "bsod", "seconds": 8,
      "title": "结果：BugCheck 0x50",
-     "lines": ["事件 1001 · RecordId 18267", "故障模块：ToDeskHubFlt.sys"]}
+     "lines": ["事件 1001 · RecordId 18267", "故障模块：ExampleFlt.sys"]}
   ],
   "placement": {"pre": ["title"], "post": ["result", "conclusion"]}
 }

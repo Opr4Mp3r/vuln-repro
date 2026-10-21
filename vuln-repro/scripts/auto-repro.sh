@@ -1,7 +1,7 @@
 #!/bin/bash
 # auto-repro.sh — one-shot automated reproduce-and-record for a lab VM.
 #
-# Battle-tested pipeline (2026-10-19 hunt26, generalized): host-side vncsnapshot
+# Battle-tested pipeline (generalized from a real driver campaign): host-side vncsnapshot
 # loop keeps shooting through guest BSODs; the PoC storyboard is launched as a
 # VISIBLE interactive task via schtasks /IT (no keystroke injection needed);
 # guest death is detected by the forwarded SSH port dropping; recording
