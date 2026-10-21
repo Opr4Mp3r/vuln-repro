@@ -1,6 +1,6 @@
 # vuln-repro：漏洞复现技能包
 
-版本：2026-10-20（v1.0.0）
+版本：2026-10-21（v1.1）
 形态：单技能 Agent Skill（`vuln-repro/SKILL.md` + `references/` + `scripts/` + `assets/`），遵循 Agent Skills 开放标准（agentskills.io），兼容 Claude Code 及其他支持该标准的 agent。**完全自包含，不依赖其他技能包。**
 
 ## 用途
@@ -52,18 +52,12 @@
 | 复现报告 DOCX（3） | append-poc / make_docx / check-docx | 完整 PoC 附录（防重复追加）；Markdown→A4 排版（图片映射/列表编号保留）；require/forbid 内容自检 |
 | 复现视频 MP4（5） | auto-repro / record-vnc / make-cards / encode-frames / check-mp4 | 一键录制（可见触发+判死续录+heartbeat）；帧采集（打印实测帧率）；文字卡/BSOD 结果卡渲染；插卡合成（黑边对齐+时间戳烧录）；规格校验 |
 
-## 安装
+## 快速开始（两步，全部交给 agent）
 
-```bash
-cp -r vuln-repro ~/.claude/skills/          # Claude Code
-# 或放入 .agents/skills/、.zcode/skills/ 等你 agent 的技能目录
-```
+1. **配置技能**：把 `vuln-repro/` 技能目录交给你的 agent——放进其技能目录即可（Claude Code：`~/.claude/skills/`；其他兼容 Agent Skills 的 agent：`.agents/skills/`、`.zcode/skills/` 等），也可以直接让 agent 自行完成安装。
+2. **执行环境配置**：对 agent 说"配置漏洞复现环境"。agent 会自动完成全部准备：运行能力自检（`scripts/lab-check.sh`）、按 `references/host-setup.md` 补装缺失依赖、配置 KVM、构建 Windows/Linux 基线母盘并打快照；缺能力时明确报告缺什么、怎么装，不猜也不跳过。
 
-安装后首次使用先自检（新机从零搭建按 `vuln-repro/references/host-setup.md`）：
-
-```bash
-~/.claude/skills/vuln-repro/scripts/lab-check.sh
-```
+准备完成后即可日常使用：把漏洞报告（可选附 PoC）交给 agent，说"复现这份报告"，即产出复现报告 DOCX + 复现视频 MP4。
 
 ## 流程（SKILL.md 详版）
 
@@ -75,12 +69,6 @@ cp -r vuln-repro ~/.claude/skills/          # Claude Code
   → ④ 复现报告 DOCX（append-poc → make_docx → check-docx）
   → ⑤ 复现视频 MP4（auto-repro.sh 一键 / 手动 record+encode，check-mp4 校验）
 ```
-
-## 依赖
-
-Linux x86_64 宿主：KVM/QEMU、qemu-img、OpenSSH、sshpass、vncsnapshot、vncdo、ffmpeg（libx264）、python3 + python-docx + Pillow；可选 systemd-run（VM cgroup 限制）。靶机：Windows 10/11 或 Linux（按报告前提）。
-
-环境变量：`LAB_BASE_IMAGE`、`LAB_VM_DIR`、`LAB_SSH_PASSWORD`（靶机密码，勿写进文件）、`LAB_AGENT_PROC`（agent 进程名，默认 claude）、`LAB_EXTRA_IMAGES`、`LAB_ASSUME_YES`（全表见 `vuln-repro/references/resource-discipline.md`）。
 
 ## 脚本清单（18 个，全部可从任意 CWD 调用）
 
@@ -123,7 +111,3 @@ vuln-repro/
         ├── go.cmd.template       # guest 内分镜模板（schtasks /IT 可见执行）
         └── lab.yaml.example      # 档位/基线参数人读示例
 ```
-
-## 已验证出身
-
-脚本与流程来自一套经过实战检验的漏洞研究流水线（Windows 驱动战役：崩溃型 965 帧蓝屏全程自动出片；挂死型外部 heartbeat 取证；自包含 DOCX 报告），本包为其"复现 + 报告 + 录制"子集的独立重组，剔除挖掘/报送等无关功能。

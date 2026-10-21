@@ -1,6 +1,6 @@
 ---
 name: vuln-repro
-description: 接收第三方漏洞报告并在隔离实验环境中复现：搭建 KVM 靶机、按报告/PoC 原样触发、采集证据，产出复现报告 DOCX 与复现视频 MP4。当用户提供漏洞报告/CVE/安全公告并要求复现、验证复现、写复现报告或录制复现视频时使用。
+description: 接收第三方漏洞报告并在隔离实验环境中复现：搭建 KVM 靶机、按报告/PoC 原样触发、采集证据，产出复现报告 DOCX 与复现视频 MP4。当用户要求配置/搭建/检查漏洞复现环境（装依赖、KVM、基线母盘），或提供漏洞报告/CVE/安全公告并要求复现、验证复现、写复现报告或录制复现视频时使用。
 compatibility: 要求 Linux x86_64 宿主（KVM、/proc、GNU coreutils）；依赖 qemu-system-x86_64/qemu-img、ssh/sshpass、vncsnapshot/vncdo、ffmpeg(libx264)、python3 + python-docx + Pillow；可选 systemd-run（VM cgroup 限制）。本技能完全自包含，不依赖其他技能。
 metadata:
   version: "1.2.0"
