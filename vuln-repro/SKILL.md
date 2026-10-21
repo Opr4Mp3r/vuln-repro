@@ -3,7 +3,7 @@ name: vuln-repro
 description: 接收第三方漏洞报告并在隔离实验环境中复现：搭建 KVM 靶机、按报告/PoC 原样触发、采集证据，产出复现报告 DOCX 与复现视频 MP4。当用户提供漏洞报告/CVE/安全公告并要求复现、验证复现、写复现报告或录制复现视频时使用。
 compatibility: 要求 Linux x86_64 宿主（KVM、/proc、GNU coreutils）；依赖 qemu-system-x86_64/qemu-img、ssh/sshpass、vncsnapshot/vncdo、ffmpeg(libx264)、python3 + python-docx + Pillow；可选 systemd-run（VM cgroup 限制）。本技能完全自包含，不依赖其他技能。
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # 漏洞复现工厂（vuln-repro）
@@ -95,10 +95,11 @@ open_questions: [...]
 ```bash
 scripts/auto-repro.sh --display 127.0.0.1:<d> --ssh-port <p> --ssh-user <u> \
   --go-cmd '<guest 内分镜脚本>' --out "<目标> <漏洞类型> 复现视频.mp4" \
-  --mode crash|hang [--vm-disk <盘路径>] [--heartbeat] [--duration 240]
+  --mode crash|hang [--vm-disk <盘路径>] [--heartbeat] [--duration 240] \
+  [--cards cards/] [--no-encode]
 ```
 
-分镜模板 `assets/go.cmd.template`；录制原理、guest 一次性环境（AutoAdminLogon/防息屏/关 WinRE）与实测坑见 `references/recording.md`。纪律：**最终视频基于 PRODUCT 级部署**（LAB 级手工组件快照不得用于最终视频，先完整重装重验再录）；片中证明**复现环境与报告前提一致**（版本指纹入镜；报告宣称低权限则标准用户 `whoami` 入镜）；真实屏幕、失败不剪、不摆拍。规格校验 `scripts/check-mp4.sh`。文件名与 DOCX 同名（扩展名不同）。
+分镜模板 `assets/go.cmd.template`（STEP-N-<身份> 窗口标题 + `=== 分段 ===` 结构化输出 + 产品 GUI `start` 拉起入镜）；录制原理、guest 一次性环境（AutoAdminLogon/防息屏/关 WinRE）与实测坑见 `references/recording.md`。纪律：**最终视频基于 PRODUCT 级部署**（LAB 级手工组件快照不得用于最终视频，先完整重装重验再录）；片中证明**复现环境与报告前提一致**（版本指纹入镜；报告宣称低权限则标准用户 `whoami` 入镜）；**目标产品 GUI 必须出镜**（客户端界面/安装走查/托盘图标，不是黑盒脚本拉服务）；片头/结果/结论卡用 `scripts/make-cards.py` 生成、`encode-frames.sh --cards` 拼接，结果卡数据来自实测事件日志；真实屏幕、失败不剪、不摆拍。规格校验 `scripts/check-mp4.sh`。文件名与 DOCX 同名（扩展名不同）。
 
 ## 5. 交付物与收尾
 

@@ -12,7 +12,14 @@
 #   auto-repro.sh --display 127.0.0.1:5 --ssh-port 2224 --ssh-user administrator \
 #                 --go-cmd 'c:\p\go.cmd' --out repro.mp4 \
 #                 [--mode crash|hang] [--watch 600] [--post-death 150] \
-#                 [--duration 240] [--fps 5] [--heartbeat] [--vm-disk PATH]
+#                 [--duration 240] [--fps 5] [--heartbeat] [--vm-disk PATH] \
+#                 [--cards cards/] [--no-encode]
+#
+# --cards: dir from make-cards.py (placement.tsv); passed to encode-frames.sh
+#   so title/result/conclusion cards are spliced into the final MP4.
+# --no-encode: record only. For crash videos whose result card needs the REAL
+#   event-log data (BugCheck code, Event 1001 RecordId): record first, read the
+#   event log, run make-cards.py, then encode manually with --cards.
 #
 # Prereqs: vncsnapshot, sshpass, ffmpeg with libx264 (via encode-frames.sh);
 #          LAB_SSH_PASSWORD must hold the guest password;
@@ -22,12 +29,14 @@ set -u
 
 display=""; ssh_port=""; ssh_user=""; go_cmd=""; out=""; mode="crash"
 watch=600; post_death=150; duration=240; fps=5; heartbeat=0; vm_disk=""
+cards=""; no_encode=0
 task="repro-$$"
 usage() {
   cat >&2 <<EOF
 usage: $0 --display host:d --ssh-port N --ssh-user U --go-cmd 'c:\\p\\go.cmd' --out file.mp4
           [--mode crash|hang] [--watch 600] [--post-death 150] [--duration 240]
           [--fps 5] [--heartbeat] [--vm-disk /path/to/vm.qcow2]
+          [--cards <dir>] [--no-encode]
   crash mode: trigger, wait for SSH to drop (guest death), keep recording --post-death s
   hang  mode: trigger, record --duration s total (use --heartbeat for the outage evidence)
 EOF
@@ -47,7 +56,9 @@ while [ $# -gt 0 ]; do
     --fps) fps=${2:?"--fps requires a value"}; shift 2;;
     --task) task=${2:-}; shift 2;;
     --vm-disk) vm_disk=${2:?"--vm-disk requires a value"}; shift 2;;
+    --cards) cards=${2:?"--cards requires a value"}; shift 2;;
     --heartbeat) heartbeat=1; shift;;
+    --no-encode) no_encode=1; shift;;
     -h|--help) usage;;
     *) echo "unknown arg: $1" >&2; usage;;
   esac
@@ -130,7 +141,16 @@ measured=$(awk -v g="$frames" -v e="$elapsed" 'BEGIN{ if (e>0) printf "%.4f", g/
 echo "[$(date +%T)] frames=$frames elapsed=${elapsed}s measured_fps=$measured"
 
 # 7) encode with wall-clock timestamp burned in
-"$ENC" --frames "$F" --out "$out" --fps "$measured" --timestamp || exit 2
+if [ "$no_encode" -eq 1 ]; then
+  echo "[$(date +%T)] --no-encode: frames kept in $F ($frames frames, measured_fps=$measured)"
+  echo "next: read the real event log, run make-cards.py, then e.g.:"
+  echo "  $(dirname "$0")/encode-frames.sh --frames '$F' --out '$out' --fps $measured --timestamp --preset medium --crf 19 --cards <cards-dir>"
+  [ "$mode" != "crash" ] || [ "$died" -eq 1 ] || exit 3
+  exit 0
+fi
+enc_args=(--frames "$F" --out "$out" --fps "$measured" --timestamp --preset medium --crf 19)
+[ -n "$cards" ] && enc_args+=(--cards "$cards")
+"$ENC" "${enc_args[@]}" || exit 2
 echo "[$(date +%T)] heartbeat summary: $(awk '{c[$2]++} END {for (k in c) printf "%s=%d ", k, c[k]}' "$HBLOG" 2>/dev/null || echo n/a)"
 
 "$(dirname "$0")/check-mp4.sh" "$out" || exit 2

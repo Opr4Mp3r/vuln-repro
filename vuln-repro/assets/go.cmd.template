@@ -1,36 +1,51 @@
 @echo off
 rem go.cmd.template — guest-side PoC storyboard for auto-repro.sh.
-rem Copy to the guest (e.g. c:\p\go.cmd) and adapt every REM-marked slot.
-rem Rules: each step prints "=== Step N ... ===" so the video is readable with
-rem sound off; pause between steps so the capture (2-5 fps) doesn't miss them;
-rem finish with the expected outcome. Do not weaponize; crash/hang proof only.
+rem Copy to the guest (e.g. c:\p\go.cmd) and adapt every <...> slot.
+rem Conventions (benchmark-aligned):
+rem   - each step runs in ONE visible console whose title encodes step+identity
+rem       title STEP-1-ENV / STEP-2-USER / STEP-3-TRIGGER / STEP-4-POST
+rem     so viewers always know which step and as whom it runs;
+rem   - fingerprint output is printed in labelled sections
+rem       === OS === / === <product> === / === <component> === / === default security ===
+rem     readable with sound off at any capture fps;
+rem   - the target product's OWN GUI must appear on camera: launch the client
+rem     with `start`, pause 6-10 s, then continue (no black-box script services);
+rem   - pause between steps so a 2-5 fps capture doesn't miss them;
+rem   - do not weaponize; crash/hang proof only. Failures stay in the video.
 
-rem === Step 1: environment / normal-victim config ===
-echo === Step 1: winver + component hash ===
-winver
-rem (close winver manually once, or replace with: cmd /c ver + reg query for build)
-powershell -NoProfile -Command "Get-FileHash C:\path\to\driver.sys -Algorithm SHA256"
-timeout /t 4 /nobreak >nul
+rem === Step 1: product on camera + environment fingerprint ===
+title STEP-1-ENV
+echo === OS ===
+ver
+echo === <product> ===
+echo Install dir: C:\Program Files\<product>\
+powershell -NoProfile -Command "Get-FileHash '<官方安装包路径>.exe' -Algorithm SHA256"
+echo desktop and tray icon present; service state:
+sc query <product_service> | findstr /i "state"
+echo launching <product> client for the camera ...
+start "" "C:\Program Files\<product>\<client>.exe"
+timeout /t 8 /nobreak >nul
 
-rem === Step 2: standard-user proof (the core selling point) ===
-echo === Step 2: whoami / groups ===
+rem === Step 2: driver/security fingerprint + standard-user proof ===
+title STEP-2-USER
+echo === <component> ===
+powershell -NoProfile -Command "(Get-Item 'C:\Windows\System32\drivers\<driver>.sys').VersionInfo.FileVersion; Get-FileHash 'C:\Windows\System32\drivers\<driver>.sys' -Algorithm SHA256"
+echo === default security ===
+bcdedit | findstr /i "testsigning"
+reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v EnableLUA
+echo === user ===
 whoami
-whoami /groups | findstr /i "administrators"
 net localgroup Administrators
 timeout /t 4 /nobreak >nul
 
-rem === Step 3: vendor deployment proof ===
-echo === Step 3: sc qc <service> ===
-sc qc <service>
-sc query <service>
-timeout /t 3 /nobreak >nul
+rem === Step 3: trigger exactly as the report says (standard user) ===
+title STEP-3-TRIGGER
+echo === Step 3: run PoC as reported ===
+<报告/PoC 原样命令>
+echo EXPECTED: <fill in from the report: freeze, no 1001 / bugcheck 0xXX / frames returned>
 
-rem === Step 4: trigger the PoC (standard user) ===
-echo === Step 4: run PoC ===
-powershell -NoProfile -ExecutionPolicy Bypass -File C:\path\to\poc.ps1 <args>
-echo EXPECTED: <fill in: freeze, no 1001 / bugcheck 0xXX / frames returned>
-
-rem === Step 5: post-conditions (only reached when the guest survives) ===
-echo === Step 5: post-check ===
+rem === Step 4: post-conditions (only reached when the guest survives) ===
+title STEP-4-POST
+echo === Step 4: post-check ===
 powershell -NoProfile -Command "Get-WinEvent -FilterHashtable @{LogName='System';Id=1001} -MaxEvents 1 | Format-List"
 dir C:\Windows\Minidump 2>nul

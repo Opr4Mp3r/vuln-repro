@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Capture VNC frames at a fixed interval for a bounded duration.
-# Usage: record-vnc.sh --display 127.0.0.1:6 --out frames/ --fps 2.5 --duration 180
+# Usage: record-vnc.sh --display 127.0.0.1:6 --out frames/ --fps 5 --duration 180
 # --duration is mandatory: an unbounded capture loop can fill the disk.
+# Default 5 fps matches the battle-tested machine pipeline: 2.5 fps misses
+#   1-2 s transients (window switches, short error dialogs).
 # Note: nominal fps is the sleep interval target; the achieved frame rate is
 # slightly lower (each vncsnapshot call takes ~5-50 ms). When encoding later,
 # pass --fps <frames/wall-clock-seconds> (the measured rate) to keep real-time
@@ -10,10 +12,10 @@ set -u
 
 display=""
 out=""
-fps="2.5"
+fps="5"
 duration=""
 usage() {
-  echo "usage: $0 --display <host:display> --out <dir> --duration <seconds> [--fps 2.5]" >&2
+  echo "usage: $0 --display <host:display> --out <dir> --duration <seconds> [--fps 5]" >&2
   exit 2
 }
 while [ $# -gt 0 ]; do
@@ -40,7 +42,7 @@ while :; do
   now=$(date +%s)
   [ $((now - start)) -ge "$duration" ] && break
   n=$(printf '%06d' "$i")
-  if ! vncsnapshot -allowblank -quiet "$display" "$out/frame-$n.jpg" >/dev/null 2>&1; then
+  if ! vncsnapshot -allowblank -quiet -quality 82 "$display" "$out/frame-$n.jpg" >/dev/null 2>&1; then
     failed=$((failed+1))
   fi
   i=$((i+1))
